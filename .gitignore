@@ -1,0 +1,6 @@
+/.next
+/node_modules
+
+sw.json
+.vercel
+.env*

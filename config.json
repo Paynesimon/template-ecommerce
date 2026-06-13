@@ -1,0 +1,45 @@
+{
+  "store": {
+    "name": "mytest",
+    "description": "E-Commerce Store",
+    "tagline": "mytest: Bang & Olufsen Speakers, Pure Audio Joy.",
+    "brandStory": "At mytest, we don’t just sell speakers—we sell the magic of sound that wraps around you like a hug. It all started with a rainy Saturday afternoon in Copenhagen, where our founder sat in a small café, transfixed by the way a Bang & Olufsen speaker turned a simple jazz track into something alive: the saxophone’s breath, the piano’s soft resonance, even the quiet rustle of the barista’s apron felt part of the melody. That moment sparked a passion: to bring that same feeling of wonder to people’s homes, not as a luxury item, but as a gateway to moments that matter. For us, Bang & Olufsen isn’t just a brand—it’s a promise of craftsmanship that turns sound into emotion.\n\nWhat makes mytest different? We’re not a big-box store drowning in products. We’re a curated space dedicated to one thing: helping you make the most of your Bang & Olufsen speaker. Every member of our team knows this speaker inside out—from its hand-polished aluminum frame to its cutting-edge acoustic technology. We don’t just ship it to your door; we offer personalized consultations to help you place it in your living room for optimal sound, adjust settings to match your favorite genres, and even share playlists that make every note sing. We believe that buying a premium speaker should be an experience, not a transaction—and that’s exactly what we deliver.\n\nBecause sound is personal. It’s the first dance at your wedding, the lullaby that put your child to sleep, the old song that takes you back to your first road trip. At mytest, we get that. Our speaker isn’t just a piece of tech—it’s a companion for the moments you want to hold onto. When you bring it home, you’re not just investing in a speaker; you’re investing in nights of laughter with friends, quiet mornings with your favorite podcast, and every little joy that sound can amplify. We’re here to help you turn ordinary days into extraordinary memories—one note at a time.",
+    "creator": "My Shop",
+    "keywords": [],
+    "contactEmail": "",
+    "telegramLink": "",
+    "instagramLink": "",
+    "twitterLink": "",
+    "facebookLink": "",
+    "linkedinLink": "",
+    "tiktokLink": "",
+    "faq": "Q: How long does shipping take and are there free shipping options?  \nA: Standard shipping takes 3-5 business days; free shipping applies to orders over $50. Express shipping (2-3 days) is available for an extra fee.  \n\nQ: Can I return a product if I'm not satisfied?  \nA: Yes! We accept returns within 30 days of delivery. Items must be unused, in original packaging, and include a receipt. Refunds are processed within 5 business days of receiving the return.  \n\nQ: What payment methods do you accept at mytest?  \nA: We accept major credit cards (Visa, Mastercard, Amex), PayPal, Apple Pay, and Google Pay for secure transactions.  \n\nQ: How do you ensure the quality of your products?  \nA: All products undergo rigorous pre-shipping quality checks. We source from trusted suppliers and offer a 1-year warranty on most items for manufacturing defects.  \n\nQ: How can I contact customer support for help?  \nA: Reach us via email (support@mytest.com), live chat (9am-5pm EST), or phone (1-800-MYTEST1). We respond within 24 hours on business days."
+  },
+  "products": [
+    {
+      "title": "Bang and Olufsen Speaker",
+      "brand": "Bang and Olufsen",
+      "price": 6688,
+      "description": "高端无线蓝牙音箱，标志性音效与北欧极简设计",
+      "images": [
+        "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=800"
+      ],
+      "categories": [
+        "音响"
+      ],
+      "keywords": [
+        "蓝牙音箱",
+        "高端音响",
+        "Bang and Olufsen"
+      ],
+      "isAvailable": true
+    }
+  ],
+  "banners": [
+    {
+      "image": "",
+      "label": "",
+      "order": 0
+    }
+  ]
+}
