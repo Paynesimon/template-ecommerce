@@ -8,9 +8,9 @@ const fs = require('fs')
 const path = require('path')
 
 // ===== 配置 =====
-const FEISHU_APP_ID = 'YOUR_FEISHU_APP_ID'
-const FEISHU_APP_SECRET = 'YOUR_FEISHU_APP_SECRET'
-const FEISHU_APP_TOKEN = 'YOUR_FEISHU_APP_TOKEN'
+const FEISHU_APP_ID = process.env.FEISHU_APP_ID || 'YOUR_FEISHU_APP_ID'
+const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET || 'YOUR_FEISHU_APP_SECRET'
+const FEISHU_APP_TOKEN = process.env.FEISHU_APP_TOKEN || 'YOUR_FEISHU_APP_TOKEN'
 const FEISHU_TABLES = {
    store: 'tblAn8PI1eoduVkn',
    products: 'tbldKPEdxtADz4v9',
@@ -19,17 +19,17 @@ const FEISHU_TABLES = {
 }
 
 const NEON_API_KEY = process.env.NEON_API_KEY || 'YOUR_NEON_API_KEY'
-const NEON_ORG_ID = 'YOUR_NEON_ORG_ID'
+const NEON_ORG_ID = process.env.NEON_ORG_ID || 'YOUR_NEON_ORG_ID'
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || 'YOUR_GITHUB_TOKEN'
-const GITHUB_USERNAME = 'YOUR_GITHUB_USERNAME'
+const GITHUB_TOKEN = process.env.GH_PAT || process.env.GITHUB_TOKEN || 'YOUR_GITHUB_TOKEN'
+const GITHUB_USERNAME = process.env.GH_USERNAME || 'YOUR_GITHUB_USERNAME'
 
 const VERCEL_TOKEN = process.env.VERCEL_TOKEN || 'YOUR_VERCEL_TOKEN'
-const VERCEL_TEAM_ID = 'YOUR_VERCEL_TEAM_ID'
+const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || 'YOUR_VERCEL_TEAM_ID'
 
-const MAIL_SMTP_USER = 'YOUR_MAIL_USER'
-const MAIL_SMTP_PASS = 'YOUR_MAIL_PASS'
-const JWT_SECRET_KEY = 'YOUR_JWT_SECRET'
+const MAIL_SMTP_USER = process.env.MAIL_SMTP_USER || 'YOUR_MAIL_USER'
+const MAIL_SMTP_PASS = process.env.MAIL_SMTP_PASS || 'YOUR_MAIL_PASS'
+const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || 'YOUR_JWT_SECRET'
 
 const BASE_DIR = path.join(process.env.HOME, 'Desktop/next-prisma-tailwind-ecommerce')
 const STOREFRONT_DIR = path.join(BASE_DIR, 'apps/storefront')

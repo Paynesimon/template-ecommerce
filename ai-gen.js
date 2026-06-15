@@ -3,7 +3,7 @@
 // 运行方法：node ai-gen.js 客户ID
 // 例如：node ai-gen.js client001
 
-const ARK_API_KEY = 'ark-3c2e7343-f8ef-46f5-b008-3aa589270656-78fb9'
+const ARK_API_KEY = process.env.ARK_API_KEY || 'ark-3c2e7343-f8ef-46f5-b008-3aa589270656-78fb9'
 const ARK_MODEL = 'ep-20260520160054-cvn7v'
 const ARK_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
 
