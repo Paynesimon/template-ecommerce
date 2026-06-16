@@ -21,18 +21,19 @@ const FEISHU_TABLES = {
 const NEON_API_KEY = process.env.NEON_API_KEY || 'YOUR_NEON_API_KEY'
 const NEON_ORG_ID = process.env.NEON_ORG_ID || 'YOUR_NEON_ORG_ID'
 
-const GITHUB_TOKEN = process.env.GH_PAT || process.env.GITHUB_TOKEN || 'YOUR_GITHUB_TOKEN'
+// 自动检测运行环境：本地 or GitHub Actions
+const IS_CI = process.env.GITHUB_ACTIONS === 'true'
+const GITHUB_TOKEN = IS_CI
+   ? (process.env.GH_PAT || process.env.GITHUB_PAT || process.env.PAT || '')
+   : (process.env.GH_PAT || process.env.GITHUB_TOKEN || 'YOUR_GITHUB_TOKEN')
 let githubUsername = (process.env.GH_USERNAME || process.env.GITHUB_ACTOR || '').trim()
 
 const VERCEL_TOKEN = process.env.VERCEL_TOKEN || 'YOUR_VERCEL_TOKEN'
 const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || 'YOUR_VERCEL_TEAM_ID'
-
 const MAIL_SMTP_USER = process.env.MAIL_SMTP_USER || 'YOUR_MAIL_USER'
 const MAIL_SMTP_PASS = process.env.MAIL_SMTP_PASS || 'YOUR_MAIL_PASS'
 const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || 'YOUR_JWT_SECRET'
 
-// 自动检测运行环境：本地 or GitHub Actions
-const IS_CI = process.env.GITHUB_ACTIONS === 'true'
 const BASE_DIR = IS_CI
    ? path.join(process.cwd())
    : path.join(process.env.HOME, 'Desktop/next-prisma-tailwind-ecommerce/apps/storefront')
@@ -56,11 +57,15 @@ function githubHeaders() {
 }
 
 async function ensureGithubConfig() {
+   const hasPat = !!(process.env.GH_PAT || process.env.GITHUB_PAT || process.env.PAT)
+
+   if (IS_CI && !hasPat) {
+      throw new Error(
+         '未检测到 GH_PAT。请到 myshop-builder → Settings → Secrets and variables → Actions → Secrets 添加 GH_PAT（Classic PAT，勾选 repo 权限）。注意：必须放在 Secrets 标签页，不能放在 Variables；内置 GITHUB_TOKEN 无法创建新仓库。'
+      )
+   }
    if (!GITHUB_TOKEN || GITHUB_TOKEN.startsWith('YOUR_')) {
       throw new Error('缺少 GitHub Token：请在 Secrets 中设置 GH_PAT（需 repo 权限）')
-   }
-   if (IS_CI && !process.env.GH_PAT) {
-      throw new Error('CI 环境必须使用 GH_PAT（Personal Access Token），内置 GITHUB_TOKEN 无法创建新仓库')
    }
 
    if (githubUsername && !githubUsername.startsWith('YOUR_')) {
