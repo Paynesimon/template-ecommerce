@@ -47,6 +47,26 @@ const CONFIG_PATH = path.join(STOREFRONT_DIR, 'config.json')
 // ===== 工具函数 =====
 function log(emoji, msg) { console.log(`${emoji}  ${msg}`) }
 
+function githubHeaders() {
+   return {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+   }
+}
+
+function validateGithubConfig() {
+   if (!GITHUB_TOKEN || GITHUB_TOKEN.startsWith('YOUR_')) {
+      throw new Error('缺少 GitHub Token：请在 Secrets 中设置 GH_PAT（需 repo 权限）')
+   }
+   if (!GITHUB_USERNAME || GITHUB_USERNAME.startsWith('YOUR_')) {
+      throw new Error('缺少 GitHub 用户名：请在 Secrets 中设置 GH_USERNAME')
+   }
+   if (IS_CI && !process.env.GH_PAT) {
+      throw new Error('CI 环境必须使用 GH_PAT（Personal Access Token），内置 GITHUB_TOKEN 无法创建新仓库')
+   }
+}
+
 function run(command, cwd, env) {
    execSync(command, {
       cwd: cwd || STOREFRONT_DIR,
@@ -277,24 +297,38 @@ function writeConfig(store, products, banners) {
 // ===== 第六步：GitHub 建库 + Push =====
 async function pushToGithub(clientId, repoSuffix, sourceDir) {
    const repoName = `${repoSuffix}-${clientId}`
+   const headers = githubHeaders()
+
    const checkRes = await fetch(
       `https://api.github.com/repos/${GITHUB_USERNAME}/${repoName}`,
-      { headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' } }
+      { headers }
    )
-   if (checkRes.status !== 200) {
+
+   if (checkRes.status === 404) {
       const createRes = await fetch('https://api.github.com/user/repos', {
          method: 'POST',
-         headers: {
-            Authorization: `token ${GITHUB_TOKEN}`,
-            Accept: 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-         },
+         headers: { ...headers, 'Content-Type': 'application/json' },
          body: JSON.stringify({ name: repoName, description: `${repoSuffix} - ${clientId}`, private: true, auto_init: false }),
       })
-      if (!createRes.ok) throw new Error(`创建 GitHub 仓库失败：${repoName}`)
-      log('✅', `GitHub 仓库创建成功：${repoName}`)
-   } else {
+      const createBody = await createRes.json().catch(() => ({}))
+      if (!createRes.ok) {
+         const alreadyExists = createRes.status === 422 && (
+            createBody.message?.includes('already exists') ||
+            createBody.errors?.some((e) => e.message?.includes('already exists'))
+         )
+         if (alreadyExists) {
+            log('⚠️', `GitHub 仓库已存在：${repoName}`)
+         } else {
+            throw new Error(`创建 GitHub 仓库失败：${repoName} (${createRes.status}) ${createBody.message || JSON.stringify(createBody)}`)
+         }
+      } else {
+         log('✅', `GitHub 仓库创建成功：${repoName}`)
+      }
+   } else if (checkRes.status === 200) {
       log('⚠️', `GitHub 仓库已存在：${repoName}`)
+   } else {
+      const checkBody = await checkRes.json().catch(() => ({}))
+      throw new Error(`检查 GitHub 仓库失败：${repoName} (${checkRes.status}) ${checkBody.message || JSON.stringify(checkBody)}`)
    }
 
    const pushUrl = `https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/${repoName}.git`
@@ -303,8 +337,8 @@ async function pushToGithub(clientId, repoSuffix, sourceDir) {
       run('git init', sourceDir)
       run('git branch -M main', sourceDir)
    }
-   run('git config user.email "YOUR_MAIL_USER"', sourceDir)
-   run('git config user.name "YOUR_GITHUB_USERNAME"', sourceDir)
+   run(`git config user.email "${MAIL_SMTP_USER}"`, sourceDir)
+   run(`git config user.name "${GITHUB_USERNAME}"`, sourceDir)
    run('git add .', sourceDir)
    try { run(`git commit -m "deploy: ${clientId} - ${new Date().toISOString()}"`, sourceDir) } catch (e) { log('⚠️', '无新变更') }
    try { run('git remote remove origin', sourceDir) } catch (e) {}
@@ -314,7 +348,7 @@ async function pushToGithub(clientId, repoSuffix, sourceDir) {
 
    const repoRes = await fetch(
       `https://api.github.com/repos/${GITHUB_USERNAME}/${repoName}`,
-      { headers: { Authorization: `token ${GITHUB_TOKEN}` } }
+      { headers }
    )
    const repoData = await repoRes.json()
    return repoData.id
@@ -477,6 +511,8 @@ async function main() {
    console.log(`${'='.repeat(50)}\n`)
 
    try {
+      validateGithubConfig()
+
       console.log('🤖 第零步：AI 生成文案...')
    await generateAIContent(clientId)
 
