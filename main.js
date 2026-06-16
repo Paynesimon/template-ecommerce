@@ -22,7 +22,7 @@ const NEON_API_KEY = process.env.NEON_API_KEY || 'YOUR_NEON_API_KEY'
 const NEON_ORG_ID = process.env.NEON_ORG_ID || 'YOUR_NEON_ORG_ID'
 
 const GITHUB_TOKEN = process.env.GH_PAT || process.env.GITHUB_TOKEN || 'YOUR_GITHUB_TOKEN'
-const GITHUB_USERNAME = process.env.GH_USERNAME || 'YOUR_GITHUB_USERNAME'
+let githubUsername = (process.env.GH_USERNAME || process.env.GITHUB_ACTOR || '').trim()
 
 const VERCEL_TOKEN = process.env.VERCEL_TOKEN || 'YOUR_VERCEL_TOKEN'
 const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || 'YOUR_VERCEL_TEAM_ID'
@@ -55,16 +55,28 @@ function githubHeaders() {
    }
 }
 
-function validateGithubConfig() {
+async function ensureGithubConfig() {
    if (!GITHUB_TOKEN || GITHUB_TOKEN.startsWith('YOUR_')) {
       throw new Error('缺少 GitHub Token：请在 Secrets 中设置 GH_PAT（需 repo 权限）')
-   }
-   if (!GITHUB_USERNAME || GITHUB_USERNAME.startsWith('YOUR_')) {
-      throw new Error('缺少 GitHub 用户名：请在 Secrets 中设置 GH_USERNAME')
    }
    if (IS_CI && !process.env.GH_PAT) {
       throw new Error('CI 环境必须使用 GH_PAT（Personal Access Token），内置 GITHUB_TOKEN 无法创建新仓库')
    }
+
+   if (githubUsername && !githubUsername.startsWith('YOUR_')) {
+      log('✅', `GitHub 用户：${githubUsername}`)
+      return
+   }
+
+   const res = await fetch('https://api.github.com/user', { headers: githubHeaders() })
+   const data = await res.json().catch(() => ({}))
+   if (res.ok && data.login) {
+      githubUsername = data.login
+      log('✅', `GitHub 用户（从 PAT 自动识别）：${githubUsername}`)
+      return
+   }
+
+   throw new Error('缺少 GitHub 用户名：请在 Secrets 中设置 GH_USERNAME，或确保 GH_PAT 有效')
 }
 
 function run(command, cwd, env) {
@@ -300,7 +312,7 @@ async function pushToGithub(clientId, repoSuffix, sourceDir) {
    const headers = githubHeaders()
 
    const checkRes = await fetch(
-      `https://api.github.com/repos/${GITHUB_USERNAME}/${repoName}`,
+      `https://api.github.com/repos/${githubUsername}/${repoName}`,
       { headers }
    )
 
@@ -331,14 +343,14 @@ async function pushToGithub(clientId, repoSuffix, sourceDir) {
       throw new Error(`检查 GitHub 仓库失败：${repoName} (${checkRes.status}) ${checkBody.message || JSON.stringify(checkBody)}`)
    }
 
-   const pushUrl = `https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/${repoName}.git`
+   const pushUrl = `https://${githubUsername}:${GITHUB_TOKEN}@github.com/${githubUsername}/${repoName}.git`
    const gitDir = path.join(sourceDir, '.git')
    if (!fs.existsSync(gitDir)) {
       run('git init', sourceDir)
       run('git branch -M main', sourceDir)
    }
    run(`git config user.email "${MAIL_SMTP_USER}"`, sourceDir)
-   run(`git config user.name "${GITHUB_USERNAME}"`, sourceDir)
+   run(`git config user.name "${githubUsername}"`, sourceDir)
    run('git add .', sourceDir)
    try { run(`git commit -m "deploy: ${clientId} - ${new Date().toISOString()}"`, sourceDir) } catch (e) { log('⚠️', '无新变更') }
    try { run('git remote remove origin', sourceDir) } catch (e) {}
@@ -347,7 +359,7 @@ async function pushToGithub(clientId, repoSuffix, sourceDir) {
    log('✅', `代码推送成功：${repoName}`)
 
    const repoRes = await fetch(
-      `https://api.github.com/repos/${GITHUB_USERNAME}/${repoName}`,
+      `https://api.github.com/repos/${githubUsername}/${repoName}`,
       { headers }
    )
    const repoData = await repoRes.json()
@@ -371,7 +383,7 @@ async function deployVercel(clientId, projectSuffix, repoName, repoId, envVars) 
    const project = await vercelRequest('POST', '/v10/projects', {
       name: projectName,
       framework: 'nextjs',
-      gitRepository: { type: 'github', repo: `${GITHUB_USERNAME}/${repoName}` },
+      gitRepository: { type: 'github', repo: `${githubUsername}/${repoName}` },
       environmentVariables: envVars,
    })
    if (project.error && project.error.code !== 'project_already_exists' && project.error.code !== 'conflict') {
@@ -393,7 +405,7 @@ async function deployVercel(clientId, projectSuffix, repoName, repoId, envVars) 
 
    const deployment = await vercelRequest('POST', '/v13/deployments', {
       name: projectName,
-      gitSource: { type: 'github', repoId: String(repoId), ref: 'main', org: GITHUB_USERNAME, repo: repoName },
+      gitSource: { type: 'github', repoId: String(repoId), ref: 'main', org: githubUsername, repo: repoName },
       projectSettings: { framework: 'nextjs' },
    })
    if (deployment.error) throw new Error(`触发部署失败：${JSON.stringify(deployment.error)}`)
@@ -511,7 +523,7 @@ async function main() {
    console.log(`${'='.repeat(50)}\n`)
 
    try {
-      validateGithubConfig()
+      await ensureGithubConfig()
 
       console.log('🤖 第零步：AI 生成文案...')
    await generateAIContent(clientId)
