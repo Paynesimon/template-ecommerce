@@ -31,9 +31,17 @@ const MAIL_SMTP_USER = process.env.MAIL_SMTP_USER || 'YOUR_MAIL_USER'
 const MAIL_SMTP_PASS = process.env.MAIL_SMTP_PASS || 'YOUR_MAIL_PASS'
 const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || 'YOUR_JWT_SECRET'
 
-const BASE_DIR = path.join(process.env.HOME, 'Desktop/next-prisma-tailwind-ecommerce')
-const STOREFRONT_DIR = path.join(BASE_DIR, 'apps/storefront')
-const ADMIN_DIR = path.join(BASE_DIR, 'apps/admin')
+// 自动检测运行环境：本地 or GitHub Actions
+const IS_CI = process.env.GITHUB_ACTIONS === 'true'
+const BASE_DIR = IS_CI
+   ? path.join(process.cwd())
+   : path.join(process.env.HOME, 'Desktop/next-prisma-tailwind-ecommerce/apps/storefront')
+const STOREFRONT_DIR = IS_CI
+   ? path.join(process.cwd())
+   : path.join(process.env.HOME, 'Desktop/next-prisma-tailwind-ecommerce/apps/storefront')
+const ADMIN_DIR = IS_CI
+   ? path.join(process.cwd(), '..', 'admin')
+   : path.join(process.env.HOME, 'Desktop/next-prisma-tailwind-ecommerce/apps/admin')
 const CONFIG_PATH = path.join(STOREFRONT_DIR, 'config.json')
 
 // ===== 工具函数 =====
