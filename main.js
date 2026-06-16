@@ -350,15 +350,16 @@ async function pushToGithub(clientId, repoSuffix, sourceDir) {
 
    const pushUrl = `https://${githubUsername}:${GITHUB_TOKEN}@github.com/${githubUsername}/${repoName}.git`
    const gitDir = path.join(sourceDir, '.git')
-   if (!fs.existsSync(gitDir)) {
-      run('git init', sourceDir)
-      run('git branch -M main', sourceDir)
+   // CI 检出模板时会带上模板仓库的 .git，直接 push 会导致 pack 错误；每次部署用全新 git 历史
+   if (fs.existsSync(gitDir)) {
+      fs.rmSync(gitDir, { recursive: true, force: true })
    }
+   run('git init', sourceDir)
+   run('git branch -M main', sourceDir)
    run(`git config user.email "${MAIL_SMTP_USER}"`, sourceDir)
    run(`git config user.name "${githubUsername}"`, sourceDir)
    run('git add .', sourceDir)
-   try { run(`git commit -m "deploy: ${clientId} - ${new Date().toISOString()}"`, sourceDir) } catch (e) { log('⚠️', '无新变更') }
-   try { run('git remote remove origin', sourceDir) } catch (e) {}
+   run(`git commit -m "deploy: ${clientId} - ${new Date().toISOString()}"`, sourceDir)
    run(`git remote add origin ${pushUrl}`, sourceDir)
    run('git push -u origin main --force', sourceDir)
    log('✅', `代码推送成功：${repoName}`)
