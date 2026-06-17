@@ -6,15 +6,18 @@
 const { execSync } = require('child_process')
 const path = require('path')
 
-const FEISHU_APP_ID = 'cli_aaaa4e460f781bc3'
-const FEISHU_APP_SECRET = 'jQHMKcQLlr4h0pbHDYQi7EIjFIohtsbl'
-const FEISHU_APP_TOKEN = 'Txeab1NDVaBiNssZ9mIc2fwmngo'
+const FEISHU_APP_ID = process.env.FEISHU_APP_ID || 'YOUR_FEISHU_APP_ID'
+const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET || 'YOUR_FEISHU_APP_SECRET'
+const FEISHU_APP_TOKEN = process.env.FEISHU_APP_TOKEN || 'YOUR_FEISHU_APP_TOKEN'
 const STORE_TABLE_ID = 'tblAn8PI1eoduVkn'
 
-const NEON_API_KEY = 'napi_leahg3saie54btzit25y1ap4gsljsqvr10fo6go5m8fads46n95cd9mzhc0lc1f4'
-const NEON_ORG_ID = 'org-wild-sound-86237677'
+const NEON_API_KEY = process.env.NEON_API_KEY || 'YOUR_NEON_API_KEY'
+const NEON_ORG_ID = process.env.NEON_ORG_ID || 'YOUR_NEON_ORG_ID'
 
-const STOREFRONT_DIR = path.join(process.env.HOME, 'Desktop/next-prisma-tailwind-ecommerce/apps/storefront')
+const IS_CI = process.env.GITHUB_ACTIONS === 'true'
+const STOREFRONT_DIR = IS_CI
+   ? path.join(process.cwd())
+   : path.join(process.env.HOME, 'Desktop/next-prisma-tailwind-ecommerce/apps/storefront')
 
 function log(emoji, msg) {
    console.log(`[${new Date().toLocaleString('zh-CN')}] ${emoji}  ${msg}`)
