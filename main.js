@@ -423,7 +423,10 @@ async function deployVercel(clientId, projectSuffix, repoName, repoId, envVars) 
       const state = status.status || status.readyState
       log('🔄', `[${i + 1}/36] 状态：${state}`)
       if (state === 'READY') return `https://${status.url}`
-      if (state === 'ERROR' || state === 'CANCELED') throw new Error(`部署失败：${state}`)
+      if (state === 'ERROR' || state === 'CANCELED') {
+         const detail = status.errorMessage || status.error?.message || status.readyStateReason
+         throw new Error(`部署失败：${state}${detail ? ` — ${detail}` : ''}`)
+      }
    }
    throw new Error('部署超时')
 }

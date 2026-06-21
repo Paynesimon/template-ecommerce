@@ -1,6 +1,8 @@
 import Footer from '@/components/native/Footer'
 import Header from '@/components/native/nav/parent'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardLayout({
    children,
 }: {

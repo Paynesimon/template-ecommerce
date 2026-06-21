@@ -1,5 +1,7 @@
 import prisma from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 const URL = process.env.NEXT_PUBLIC_SITE_URL
 
 export default async function sitemap() {
