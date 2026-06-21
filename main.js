@@ -128,6 +128,32 @@ async function generateAIContent(clientId) {
       log('⚠️', 'AI 文案生成失败，继续建站：' + error.message)
    }
 }
+function recordsForClient(items, clientId) {
+   return items.filter((r) => String(r.fields['客户ID'] || '').trim() === clientId)
+}
+
+function mapProductRecord(r) {
+   const f = r.fields
+   return {
+      title: f['商品名称'] || '',
+      brand: f['品牌'] || '',
+      price: parseFloat(f['价格']) || 0,
+      description: f['商品描述'] || '',
+      images: [f['图片URL'] || ''],
+      categories: f['分类'] ? f['分类'].split(',').map((c) => c.trim()) : [],
+      keywords: f['关键词'] ? f['关键词'].split(',').map((k) => k.trim()) : [],
+      isAvailable: f['是否上架'] ?? true,
+   }
+}
+
+function mapBannerRecord(r) {
+   return {
+      image: r.fields['图片URL'] || '',
+      label: r.fields['标签名'] || '',
+      order: r.fields['排序'] || 0,
+   }
+}
+
 async function fetchFeishuData(clientId) {
    const token = await getFeishuToken()
    const [storeItems, productItems, bannerItems, paymentItems] = await Promise.all([
@@ -161,25 +187,9 @@ async function fetchFeishuData(clientId) {
    const adminEmail = (f['管理员邮箱'] || MAIL_SMTP_USER).toLowerCase().trim()
    const customDomain = f['自定义域名'] || ''
 
-   const products = productItems.map((r) => {
-      const f = r.fields
-      return {
-         title: f['商品名称'] || '',
-         brand: f['品牌'] || '',
-         price: parseFloat(f['价格']) || 0,
-         description: f['商品描述'] || '',
-         images: [f['图片URL'] || ''],
-         categories: f['分类'] ? f['分类'].split(',').map((c) => c.trim()) : [],
-         keywords: f['关键词'] ? f['关键词'].split(',').map((k) => k.trim()) : [],
-         isAvailable: f['是否上架'] ?? true,
-      }
-   })
+   const products = recordsForClient(productItems, clientId).map(mapProductRecord)
 
-   const banners = bannerItems.map((r) => ({
-      image: r.fields['图片URL'] || '',
-      label: r.fields['标签名'] || '',
-      order: r.fields['排序'] || 0,
-   }))
+   const banners = recordsForClient(bannerItems, clientId).map(mapBannerRecord)
 
    const paymentItem = paymentItems.find((r) => r.fields['客户ID'] === clientId)
    const payment = {
@@ -257,6 +267,14 @@ async function syncDatabase(products, banners, connectionString, adminEmail) {
             if (!b.image) continue
             await prisma.banner.create({ data: { image: b.image, label: b.label } })
          }
+      }
+
+      const productTitles = products.map((p) => p.title).filter(Boolean)
+      if (productTitles.length) {
+         const removed = await prisma.product.deleteMany({
+            where: { title: { notIn: productTitles } },
+         })
+         if (removed.count) log('🗑️', `移除 ${removed.count} 个不属于本客户的商品`)
       }
 
       for (const p of products) {

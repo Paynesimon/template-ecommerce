@@ -157,7 +157,9 @@ async function main() {
 
    // 读取商品列表
    const productItems = await getRecords(token, PRODUCTS_TABLE_ID)
-   const products = productItems.map(r => ({
+   const products = productItems
+      .filter((r) => String(r.fields['客户ID'] || '').trim() === clientId)
+      .map((r) => ({
       recordId: r.record_id,
       title: r.fields['商品名称'] || '',
       brand: r.fields['品牌'] || '',

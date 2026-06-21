@@ -56,6 +56,32 @@ async function getConnectionString(clientId) {
    return connData.uri
 }
 
+function recordsForClient(items, clientId) {
+   return items.filter((r) => String(r.fields['客户ID'] || '').trim() === clientId)
+}
+
+function mapProductRecord(r) {
+   const f = r.fields
+   return {
+      title: f['商品名称'] || '',
+      brand: f['品牌'] || '',
+      price: parseFloat(f['价格']) || 0,
+      description: f['商品描述'] || '',
+      images: [f['图片URL'] || ''],
+      categories: f['分类'] ? f['分类'].split(',').map((c) => c.trim()) : [],
+      keywords: f['关键词'] ? f['关键词'].split(',').map((k) => k.trim()) : [],
+      isAvailable: f['是否上架'] ?? true,
+   }
+}
+
+function mapBannerRecord(r) {
+   return {
+      image: r.fields['图片URL'] || '',
+      label: r.fields['标签名'] || '',
+      order: r.fields['排序'] || 0,
+   }
+}
+
 async function syncDatabase(products, banners, connectionString) {
    process.env.DATABASE_URL = connectionString
    const { PrismaClient } = require('@prisma/client')
@@ -68,6 +94,14 @@ async function syncDatabase(products, banners, connectionString) {
             await prisma.banner.create({ data: { image: b.image, label: b.label } })
          }
          log('✅', `Banner 同步完成：${banners.length} 条`)
+      }
+
+      const productTitles = products.map((p) => p.title).filter(Boolean)
+      if (productTitles.length) {
+         const removed = await prisma.product.deleteMany({
+            where: { title: { notIn: productTitles } },
+         })
+         if (removed.count) log('🗑️', `移除 ${removed.count} 个不属于本客户的商品`)
       }
 
       for (const p of products) {
@@ -144,25 +178,9 @@ async function main() {
    const storeItem = storeItems.find((r) => r.fields['客户ID'] === clientId)
    if (!storeItem) throw new Error(`飞书里找不到客户ID为 "${clientId}" 的店铺`)
 
-   const products = productItems.map((r) => {
-      const f = r.fields
-      return {
-         title: f['商品名称'] || '',
-         brand: f['品牌'] || '',
-         price: parseFloat(f['价格']) || 0,
-         description: f['商品描述'] || '',
-         images: [f['图片URL'] || ''],
-         categories: f['分类'] ? f['分类'].split(',').map((c) => c.trim()) : [],
-         keywords: f['关键词'] ? f['关键词'].split(',').map((k) => k.trim()) : [],
-         isAvailable: f['是否上架'] ?? true,
-      }
-   })
+   const products = recordsForClient(productItems, clientId).map(mapProductRecord)
 
-   const banners = bannerItems.map((r) => ({
-      image: r.fields['图片URL'] || '',
-      label: r.fields['标签名'] || '',
-      order: r.fields['排序'] || 0,
-   }))
+   const banners = recordsForClient(bannerItems, clientId).map(mapBannerRecord)
 
    log('✅', `飞书数据：${products.length} 个商品，${banners.length} 个 Banner`)
 
