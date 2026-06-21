@@ -2,18 +2,36 @@ import prisma from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-   apiVersion: '2026-05-27.dahlia' as any,
-})
+export const dynamic = 'force-dynamic'
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+function getStripe() {
+   const secretKey = process.env.STRIPE_SECRET_KEY
+   if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured')
+   }
+   return new Stripe(secretKey, {
+      apiVersion: '2026-05-27.dahlia',
+   })
+}
 
 export async function POST(req: NextRequest) {
    try {
-      const body = await req.text()
-      const signature = req.headers.get('stripe-signature')!
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+      if (!webhookSecret) {
+         return NextResponse.json(
+            { error: 'Stripe webhook is not configured' },
+            { status: 503 }
+         )
+      }
 
-      let event: any
+      const stripe = getStripe()
+      const body = await req.text()
+      const signature = req.headers.get('stripe-signature')
+      if (!signature) {
+         return NextResponse.json({ error: 'Missing stripe-signature' }, { status: 400 })
+      }
+
+      let event
       try {
          event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
       } catch (err) {
@@ -22,9 +40,9 @@ export async function POST(req: NextRequest) {
       }
 
       if (event.type === 'checkout.session.completed') {
-         const session: any = event.data.object
+         const session = event.data.object as { id: string; amount_total?: number; customer_details?: { email?: string }; payment_intent?: string }
 
-         const lineItems = await (stripe.checkout.sessions as any).listLineItems(session.id, {
+         const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
             expand: ['data.price.product'],
          })
 
@@ -74,7 +92,11 @@ export async function POST(req: NextRequest) {
          })
 
          for (const item of lineItems.data) {
-            const productName = item.price?.product?.name
+            const stripeProduct = item.price?.product
+            const productName =
+               typeof stripeProduct === 'object' && stripeProduct && 'name' in stripeProduct
+                  ? stripeProduct.name
+                  : undefined
             if (!productName) continue
 
             const product = await prisma.product.findFirst({
