@@ -1,9 +1,11 @@
 import Carousel from '@/components/native/Carousel'
+import { JsonLd } from '@/components/native/JsonLd'
 import prisma from '@/lib/prisma'
 import { isVariableValid } from '@/lib/utils'
 import { ChevronRightIcon } from 'lucide-react'
 import type { Metadata, ResolvingMetadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 
 import { DataSection } from './components/data'
 
@@ -21,6 +23,10 @@ export async function generateMetadata(
          id: params.productId,
       },
    })
+
+   if (!product) {
+      return { title: 'Product Not Found' }
+   }
 
    return {
       title: product.title,
@@ -47,17 +53,42 @@ export default async function Product({
       },
    })
 
-   if (isVariableValid(product)) {
-      return (
-         <>
-            <Breadcrumbs product={product} />
-            <div className="mt-6 grid grid-cols-1 gap-2 md:grid-cols-3">
-               <ImageColumn product={product} />
-               <DataSection product={product} />
-            </div>
-         </>
-      )
+   if (!isVariableValid(product)) {
+      notFound()
    }
+
+   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
+   const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.title,
+      description: product.description || undefined,
+      image: product.images?.length ? product.images : undefined,
+      sku: product.id,
+      brand: product.brand?.title
+         ? { '@type': 'Brand', name: product.brand.title }
+         : undefined,
+      offers: {
+         '@type': 'Offer',
+         url: `${siteUrl}/products/${product.id}`,
+         priceCurrency: 'USD',
+         price: product.price,
+         availability: product.isAvailable
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
+      },
+   }
+
+   return (
+      <>
+         <JsonLd data={jsonLd} />
+         <Breadcrumbs product={product} />
+         <div className="mt-6 grid grid-cols-1 gap-2 md:grid-cols-3">
+            <ImageColumn product={product} />
+            <DataSection product={product} />
+         </div>
+      </>
+   )
 }
 
 const ImageColumn = ({ product }) => {

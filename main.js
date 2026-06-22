@@ -450,23 +450,19 @@ async function deployVercel(clientId, projectSuffix, repoName, repoId, envVars) 
 }
 
 
-// ===== SEO：提交 sitemap 到 Google =====
-async function submitSitemapToGoogle(siteUrl) {
+// ===== SEO：通知搜索引擎 + 返回飞书字段 =====
+const { pingSitemap, buildFeishuSeoFields } = require('./seo')
+
+async function submitSitemapToSearchEngines(siteUrl) {
    try {
-      // 方案1：Bing Ping（仍然有效）
-      const sitemapUrl = `${siteUrl}/sitemap.xml`
-      const bingPing = `https://www.bing.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`
-      const bingRes = await fetch(bingPing)
-      log(bingRes.ok ? '✅' : '⚠️', `Bing Sitemap 提交：${bingRes.status}`)
-
-      // 方案2：请求 sitemap 本身触发缓存
-      await fetch(`${siteUrl}/sitemap.xml`)
-      log('✅', `Sitemap 已预热：${sitemapUrl}`)
-
-      // 方案3：打印提示手动提交 Google Search Console
-      log('💡', `提示：请在 Google Search Console 手动提交：${sitemapUrl}`)
+      const pingResult = await pingSitemap(siteUrl)
+      log(pingResult.bing?.ok ? '✅' : '⚠️', `Bing Sitemap 提交：${pingResult.bing?.status || '失败'}`)
+      log('✅', `Sitemap 已预热：${pingResult.sitemapUrl}`)
+      log('💡', `Google 需手动提交，链接将回写飞书「Google收录」字段`)
+      return pingResult
    } catch (e) {
       log('⚠️', `Sitemap 提交出错：${e.message}`)
+      return null
    }
 }
 
@@ -512,11 +508,12 @@ async function bindDomain(clientId, customDomain) {
 }
 
 // ===== 第九步：回写飞书 =====
-async function writeBackToFeishu(token, recordId, siteUrl, adminUrl, domainInfo) {
+async function writeBackToFeishu(token, recordId, siteUrl, adminUrl, domainInfo, seoPing) {
    const fields = {
       前台地址: { link: siteUrl, text: siteUrl },
       后台地址: { link: adminUrl, text: adminUrl },
       部署状态: `✅ 已上线 - ${new Date().toLocaleString('zh-CN')}`,
+      ...buildFeishuSeoFields(siteUrl, seoPing),
    }
 
    if (domainInfo) {
@@ -613,11 +610,11 @@ async function main() {
       console.log('\n🌐 第十步：绑定自定义域名...')
       const domainInfo = await bindDomain(clientId, customDomain)
 
-      console.log('\n🔍 第十一步：提交 Sitemap 到 Google...')
-      await submitSitemapToGoogle(siteUrl)
+      console.log('\n🔍 第十一步：通知搜索引擎（Bing 自动 + Google 回写飞书）...')
+      const seoPing = await submitSitemapToSearchEngines(siteUrl)
 
       console.log('\n📬 第十二步：回写飞书...')
-      await writeBackToFeishu(token, storeRecordId, siteUrl, adminUrl, domainInfo)
+      await writeBackToFeishu(token, storeRecordId, siteUrl, adminUrl, domainInfo, seoPing)
 
       console.log(`\n${'='.repeat(50)}`)
       console.log(`🎉 建站完成！`)
