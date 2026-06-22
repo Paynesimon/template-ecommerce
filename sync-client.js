@@ -157,13 +157,7 @@ async function syncDatabase(products, banners, connectionString) {
    }
 }
 
-async function main() {
-   const clientId = process.argv[2]
-   if (!clientId) {
-      console.error('❌ 用法：node sync-client.js client001')
-      process.exit(1)
-   }
-
+async function syncClient(clientId) {
    console.log(`\n${'='.repeat(50)}`)
    console.log(`🔄 开始同步客户 [${clientId}] 商品数据（不部署）`)
    console.log(`${'='.repeat(50)}\n`)
@@ -179,7 +173,6 @@ async function main() {
    if (!storeItem) throw new Error(`飞书里找不到客户ID为 "${clientId}" 的店铺`)
 
    const products = recordsForClient(productItems, clientId).map(mapProductRecord)
-
    const banners = recordsForClient(bannerItems, clientId).map(mapBannerRecord)
 
    log('✅', `飞书数据：${products.length} 个商品，${banners.length} 个 Banner`)
@@ -190,9 +183,27 @@ async function main() {
    console.log(`\n${'='.repeat(50)}`)
    console.log(`🎉 同步完成！网站刷新即可看到最新商品（无需重新部署）`)
    console.log(`${'='.repeat(50)}\n`)
+
+   return { productCount: products.length, bannerCount: banners.length }
 }
 
-main().catch((error) => {
-   console.error('\n❌ 出错了：', error.message)
-   process.exit(1)
-})
+async function main() {
+   const clientId = process.argv[2]
+   if (!clientId) {
+      console.error('❌ 用法：node sync-client.js client001')
+      process.exit(1)
+   }
+
+   try {
+      await syncClient(clientId)
+   } catch (error) {
+      console.error('\n❌ 出错了：', error.message)
+      process.exit(1)
+   }
+}
+
+if (require.main === module) {
+   main()
+}
+
+module.exports = { syncClient }
