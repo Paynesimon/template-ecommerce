@@ -1,4 +1,6 @@
-// seo.js — 搜索引擎 sitemap 通知 + 飞书 SEO 字段
+// seo.js — 搜索引擎 sitemap 通知 + 飞书 SEO / GEO 字段
+
+const { buildFeishuGeoFields, warmGeoEndpoints } = require('./geo')
 
 function normalizeSiteUrl(siteUrl) {
    return String(siteUrl || '').replace(/\/$/, '')
@@ -49,7 +51,9 @@ function buildFeishuSeoFields(siteUrl, pingResult) {
          '② 左侧「站点地图」→ 输入 sitemap.xml 并提交',
          `③ Sitemap 地址：${sitemapUrl}`,
          bingOk ? '④ Bing 已自动通知' : '④ Bing 需手动在 Webmaster Tools 提交',
+         `⑤ GEO：${base}/llms.txt 与 ${base}/ai.txt 已生成`,
       ].join('\n'),
+      ...buildFeishuGeoFields(siteUrl),
    }
 }
 
@@ -61,4 +65,11 @@ function extractSiteUrl(field) {
    return null
 }
 
-module.exports = { pingSitemap, buildFeishuSeoFields, extractSiteUrl, normalizeSiteUrl }
+module.exports = {
+   pingSitemap,
+   buildFeishuSeoFields,
+   extractSiteUrl,
+   normalizeSiteUrl,
+   warmGeoEndpoints,
+   buildFeishuGeoFields,
+}

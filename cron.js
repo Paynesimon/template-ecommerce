@@ -4,7 +4,7 @@
 
 const { execSync } = require('child_process')
 const path = require('path')
-const { pingSitemap, buildFeishuSeoFields, extractSiteUrl } = require('./seo')
+const { pingSitemap, buildFeishuSeoFields, extractSiteUrl, warmGeoEndpoints } = require('./seo')
 
 const FEISHU_APP_ID = process.env.FEISHU_APP_ID || 'YOUR_FEISHU_APP_ID'
 const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET || 'YOUR_FEISHU_APP_SECRET'
@@ -109,6 +109,9 @@ async function notifySearchEngines(token, client) {
    log('🔍', `通知搜索引擎：${client.siteUrl}`)
    const pingResult = await pingSitemap(client.siteUrl)
    log(pingResult.bing?.ok ? '✅' : '⚠️', `Bing Ping：${pingResult.bing?.status || '失败'}`)
+
+   const geoResult = await warmGeoEndpoints(client.siteUrl)
+   log(geoResult.llms?.ok ? '✅' : '⚠️', `GEO llms.txt：${geoResult.llms?.status || geoResult.llms?.error || '失败'}`)
 
    if (client.recordId) {
       await updateFeishuSeo(token, client.recordId, client.siteUrl, pingResult)

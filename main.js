@@ -451,7 +451,7 @@ async function deployVercel(clientId, projectSuffix, repoName, repoId, envVars) 
 
 
 // ===== SEO：通知搜索引擎 + 返回飞书字段 =====
-const { pingSitemap, buildFeishuSeoFields } = require('./seo')
+const { pingSitemap, buildFeishuSeoFields, warmGeoEndpoints } = require('./seo')
 
 async function submitSitemapToSearchEngines(siteUrl) {
    try {
@@ -459,6 +459,11 @@ async function submitSitemapToSearchEngines(siteUrl) {
       log(pingResult.bing?.ok ? '✅' : '⚠️', `Bing Sitemap 提交：${pingResult.bing?.status || '失败'}`)
       log('✅', `Sitemap 已预热：${pingResult.sitemapUrl}`)
       log('💡', `Google 需手动提交，链接将回写飞书「Google收录」字段`)
+
+      const geoResult = await warmGeoEndpoints(siteUrl)
+      log(geoResult.llms?.ok ? '✅' : '⚠️', `GEO llms.txt：${geoResult.llms?.status || geoResult.llms?.error || '失败'}`)
+      log(geoResult.ai?.ok ? '✅' : '⚠️', `GEO ai.txt：${geoResult.ai?.status || geoResult.ai?.error || '失败'}`)
+
       return pingResult
    } catch (e) {
       log('⚠️', `Sitemap 提交出错：${e.message}`)
