@@ -1,6 +1,7 @@
 // src/app/api/checkout/route.ts
 // Stripe Checkout API 路由
 
+import { getStripeCurrency, toStripeUnitAmount } from '@/lib/locale'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
       })
 
       const { items } = await req.json()
+      const currency = getStripeCurrency()
 
       if (!items || items.length === 0) {
          return NextResponse.json(
@@ -28,21 +30,19 @@ export async function POST(req: NextRequest) {
          )
       }
 
-      // 构建 Stripe line_items
       const lineItems = items.map((item: any) => ({
          price_data: {
-            currency: 'usd',
+            currency,
             product_data: {
                name: item.title,
                images: item.images?.length > 0 ? [item.images[0]] : [],
                description: item.description || '',
             },
-            unit_amount: Math.round(item.price * 100), // Stripe 使用分为单位
+            unit_amount: toStripeUnitAmount(item.price),
          },
          quantity: item.quantity || 1,
       }))
 
-      // 创建 Checkout Session
       const session = await stripe.checkout.sessions.create({
          payment_method_types: ['card'],
          line_items: lineItems,

@@ -39,7 +39,7 @@ function parseFaqText(faqText) {
    return pairs
 }
 
-function buildLlmsTxt({ store, products = [], siteUrl }) {
+function buildLlmsTxt({ store, products = [], siteUrl, locale = {} }) {
    const base = normalizeSiteUrl(siteUrl)
    if (!base) return '# Store\n> Site URL not configured\n'
 
@@ -48,6 +48,9 @@ function buildLlmsTxt({ store, products = [], siteUrl }) {
    lines.push('>')
    lines.push(`> ${store.description || 'Online e-commerce store'}`)
    if (store.tagline) lines.push(`> ${store.tagline}`)
+   if (locale.language || locale.region) {
+      lines.push(`> Language: ${locale.language || 'en'} · Region: ${locale.region || 'US'} · Currency: ${locale.currency || 'USD'}`)
+   }
    lines.push('')
    lines.push('## About')
    lines.push(

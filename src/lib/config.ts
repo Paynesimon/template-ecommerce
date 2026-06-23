@@ -17,7 +17,17 @@ export interface StoreConfig {
    faq?: string
 }
 
+export interface LocaleConfig {
+   language: string
+   region: string
+   currency: string
+   timezone: string
+   countryCode: string
+   taxRate: number
+}
+
 export interface Config {
+   locale?: LocaleConfig
    store: StoreConfig
    products: any[]
    banners: any[]

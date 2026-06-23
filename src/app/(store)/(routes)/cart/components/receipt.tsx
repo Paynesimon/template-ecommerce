@@ -4,6 +4,7 @@ import { Separator } from '@/components/native/separator'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { useAuthenticated } from '@/hooks/useAuthentication'
+import { formatMoney, getTaxRate } from '@/lib/locale'
 import { isVariableValid } from '@/lib/utils'
 import { useCartContext } from '@/state/Cart'
 import { useState } from 'react'
@@ -26,15 +27,15 @@ export function Receipt() {
       }
 
       const afterDiscountAmount = totalAmount - discountAmount
-      const taxAmount = afterDiscountAmount * 0.09
+      const taxAmount = afterDiscountAmount * getTaxRate()
       const payableAmount = afterDiscountAmount + taxAmount
 
       return {
-         totalAmount: totalAmount.toFixed(2),
-         discountAmount: discountAmount.toFixed(2),
-         afterDiscountAmount: afterDiscountAmount.toFixed(2),
-         taxAmount: taxAmount.toFixed(2),
-         payableAmount: payableAmount.toFixed(2),
+         totalAmount: formatMoney(totalAmount),
+         discountAmount: formatMoney(discountAmount),
+         afterDiscountAmount: formatMoney(afterDiscountAmount),
+         taxAmount: formatMoney(taxAmount),
+         payableAmount: formatMoney(payableAmount),
       }
    }
 
@@ -92,21 +93,21 @@ export function Receipt() {
             <div className="block space-y-[1vh]">
                <div className="flex justify-between">
                   <p>Total Amount</p>
-                  <h3>${calculatePayableCost().totalAmount}</h3>
+                  <h3>{calculatePayableCost().totalAmount}</h3>
                </div>
                <div className="flex justify-between">
                   <p>Discount Amount</p>
-                  <h3>${calculatePayableCost().discountAmount}</h3>
+                  <h3>{calculatePayableCost().discountAmount}</h3>
                </div>
                <div className="flex justify-between">
                   <p>Tax Amount</p>
-                  <h3>${calculatePayableCost().taxAmount}</h3>
+                  <h3>{calculatePayableCost().taxAmount}</h3>
                </div>
             </div>
             <Separator className="my-4" />
             <div className="flex justify-between">
                <p>Payable Amount</p>
-               <h3>${calculatePayableCost().payableAmount}</h3>
+               <h3>{calculatePayableCost().payableAmount}</h3>
             </div>
             {error && (
                <p className="text-red-500 text-sm mt-2">{error}</p>

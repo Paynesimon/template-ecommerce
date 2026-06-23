@@ -1,4 +1,12 @@
 {
+  "locale": {
+    "language": "en",
+    "region": "US",
+    "currency": "USD",
+    "timezone": "America/New_York",
+    "countryCode": "US",
+    "taxRate": 0.09
+  },
   "store": {
     "name": "mytest",
     "description": "E-Commerce Store",

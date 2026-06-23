@@ -44,6 +44,7 @@ const ADMIN_DIR = IS_CI
    ? path.join(process.cwd(), '..', 'admin')
    : path.join(process.env.HOME, 'Desktop/next-prisma-tailwind-ecommerce/apps/admin')
 const CONFIG_PATH = path.join(STOREFRONT_DIR, 'config.json')
+const { parseLocaleFromFeishuFields } = require('./locale')
 
 // ===== 工具函数 =====
 function log(emoji, msg) { console.log(`${emoji}  ${msg}`) }
@@ -186,6 +187,7 @@ async function fetchFeishuData(clientId) {
 
    const adminEmail = (f['管理员邮箱'] || MAIL_SMTP_USER).toLowerCase().trim()
    const customDomain = f['自定义域名'] || ''
+   const locale = parseLocaleFromFeishuFields(f)
 
    const products = recordsForClient(productItems, clientId).map(mapProductRecord)
 
@@ -200,14 +202,16 @@ async function fetchFeishuData(clientId) {
    }
 
    log('✅', `飞书数据抓取完成：店铺「${store.name}」，管理员「${adminEmail}」，${products.length} 个商品`)
+   log('🌍', `语言/地区：${locale.language} · ${locale.region} · ${locale.currency}`)
    if (customDomain) log('🌐', `自定义域名：${customDomain}`)
 
-   return { store, products, banners, storeRecordId: storeItem.record_id, token, adminEmail, payment, customDomain }
+   return { store, products, banners, storeRecordId: storeItem.record_id, token, adminEmail, payment, customDomain, locale }
 }
 
 // ===== 第二步：创建独立数据库 =====
-async function createDatabase(clientId) {
+async function createDatabase(clientId, locale) {
    const projectName = `shop-${clientId}`
+   const regionId = locale?.neonRegion || 'aws-us-east-1'
    const listRes = await fetch(
       `https://console.neon.tech/api/v2/projects?org_id=${NEON_ORG_ID}`,
       { headers: { Authorization: `Bearer ${NEON_API_KEY}` } }
@@ -229,14 +233,14 @@ async function createDatabase(clientId) {
       method: 'POST',
       headers: { Authorization: `Bearer ${NEON_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-         project: { name: projectName, org_id: NEON_ORG_ID, region_id: 'aws-us-east-1', pg_version: 16 },
+         project: { name: projectName, org_id: NEON_ORG_ID, region_id: regionId, pg_version: 16 },
       }),
    })
    const data = await createRes.json()
    if (!createRes.ok) throw new Error(`创建数据库失败：${JSON.stringify(data)}`)
    const connectionString = data.connection_uris?.[0]?.connection_uri
    if (!connectionString) throw new Error('未获取到数据库连接字符串')
-   log('✅', `独立数据库创建成功：${projectName}`)
+   log('✅', `独立数据库创建成功：${projectName}（${regionId}）`)
    return { projectId: data.project.id, connectionString }
 }
 
@@ -324,9 +328,13 @@ async function syncDatabase(products, banners, connectionString, adminEmail) {
 }
 
 // ===== 第五步：写 config.json =====
-function writeConfig(store, products, banners) {
-   fs.writeFileSync(CONFIG_PATH, JSON.stringify({ store, products, banners }, null, 2), 'utf-8')
-   log('✅', `config.json 已更新`)
+function writeConfig(store, products, banners, locale) {
+   fs.writeFileSync(
+      CONFIG_PATH,
+      JSON.stringify({ locale, store, products, banners }, null, 2),
+      'utf-8'
+   )
+   log('✅', `config.json 已更新（${locale.language} / ${locale.region} / ${locale.currency}）`)
 }
 
 // ===== 第六步：GitHub 建库 + Push =====
@@ -558,10 +566,10 @@ async function main() {
    await generateAIContent(clientId)
 
    console.log('📋 第一步：抓取飞书数据...')
-      const { store, products, banners, storeRecordId, token, adminEmail, payment, customDomain } = await fetchFeishuData(clientId)
+      const { store, products, banners, storeRecordId, token, adminEmail, payment, customDomain, locale } = await fetchFeishuData(clientId)
 
       console.log('\n🗄️  第二步：创建独立数据库...')
-      const { connectionString } = await createDatabase(clientId)
+      const { connectionString } = await createDatabase(clientId, locale)
 
       console.log('\n🏗️  第三步：推送数据库表结构...')
       await pushSchema(connectionString)
@@ -570,7 +578,7 @@ async function main() {
       await syncDatabase(products, banners, connectionString, adminEmail)
 
       console.log('\n📝 第五步：更新 config.json...')
-      writeConfig(store, products, banners)
+      writeConfig(store, products, banners, locale)
 
       console.log('\n📦 第六步：推送前台代码到 GitHub...')
       const storefrontRepoId = await pushToGithub(clientId, 'site', STOREFRONT_DIR)
@@ -587,6 +595,12 @@ async function main() {
          { key: 'MAIL_SMTP_PASS', value: MAIL_SMTP_PASS, type: 'encrypted', target: ['production', 'preview', 'development'] },
          { key: 'NEXT_PUBLIC_SITE_URL', value: customDomain ? `https://${customDomain}` : `https://site-${clientId}.vercel.app`, type: 'plain', target: ['production', 'preview', 'development'] },
          { key: 'NEXT_PUBLIC_URL', value: customDomain ? `https://${customDomain}` : `https://site-${clientId}.vercel.app`, type: 'plain', target: ['production', 'preview', 'development'] },
+         { key: 'NEXT_PUBLIC_LOCALE', value: locale.language, type: 'plain', target: ['production', 'preview', 'development'] },
+         { key: 'NEXT_PUBLIC_REGION', value: locale.region, type: 'plain', target: ['production', 'preview', 'development'] },
+         { key: 'NEXT_PUBLIC_CURRENCY', value: locale.currency, type: 'plain', target: ['production', 'preview', 'development'] },
+         { key: 'NEXT_PUBLIC_COUNTRY_CODE', value: locale.countryCode, type: 'plain', target: ['production', 'preview', 'development'] },
+         { key: 'NEXT_PUBLIC_TAX_RATE', value: String(locale.taxRate), type: 'plain', target: ['production', 'preview', 'development'] },
+         { key: 'STORE_TIMEZONE', value: locale.timezone, type: 'plain', target: ['production', 'preview', 'development'] },
       ]
 
       if (payment.stripeSecretKey && payment.stripeSecretKey !== 'sk_test_placeholder') {

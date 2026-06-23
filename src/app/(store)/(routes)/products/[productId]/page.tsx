@@ -1,5 +1,6 @@
 import Carousel from '@/components/native/Carousel'
 import { JsonLd } from '@/components/native/JsonLd'
+import { getLocale } from '@/lib/locale'
 import prisma from '@/lib/prisma'
 import { isVariableValid } from '@/lib/utils'
 import { ChevronRightIcon } from 'lucide-react'
@@ -58,6 +59,7 @@ export default async function Product({
    }
 
    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
+   const { currency } = getLocale()
    const jsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Product',
@@ -71,7 +73,7 @@ export default async function Product({
       offers: {
          '@type': 'Offer',
          url: `${siteUrl}/products/${product.id}`,
-         priceCurrency: 'USD',
+         priceCurrency: currency,
          price: product.price,
          availability: product.isAvailable
             ? 'https://schema.org/InStock'

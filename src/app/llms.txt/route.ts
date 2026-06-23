@@ -19,6 +19,7 @@ export async function GET() {
       store: config.store,
       products,
       siteUrl,
+      locale: config.locale,
    })
 
    return new NextResponse(body, {

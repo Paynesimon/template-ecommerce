@@ -12,6 +12,7 @@ const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET || 'YOUR_FEISHU_APP_SECR
 const FEISHU_APP_TOKEN = process.env.FEISHU_APP_TOKEN || 'YOUR_FEISHU_APP_TOKEN'
 const STORE_TABLE_ID = 'tblAn8PI1eoduVkn'
 const PRODUCTS_TABLE_ID = 'tbldKPEdxtADz4v9'
+const { parseLocaleFromFeishuFields, getAiLanguageName, formatPriceForPrompt } = require('./locale')
 
 function log(emoji, msg) { console.log(`${emoji}  ${msg}`) }
 
@@ -69,14 +70,18 @@ async function updateRecord(token, tableId, recordId, fields) {
 }
 
 // ===== 生成店铺文案 =====
-async function generateStoreContent(storeName, products) {
-   const productList = products.map(p => `- ${p.title} ($${p.price})`).join('\n')
+async function generateStoreContent(storeName, products, locale) {
+   const langName = getAiLanguageName(locale.language)
+   const productList = products
+      .map((p) => `- ${p.title} (${formatPriceForPrompt(p.price, locale.currency)})`)
+      .join('\n')
 
    log('🤖', '生成品牌故事...')
    const brandStory = await askAI(`
 You are a professional e-commerce copywriter. Write a compelling brand story for an online store.
 
 Store name: ${storeName}
+Target market: ${locale.region}
 Products sold:
 ${productList}
 
@@ -84,15 +89,15 @@ Write a 2-3 paragraph brand story that:
 - Introduces the brand with passion and authenticity
 - Highlights what makes this store unique
 - Connects emotionally with potential customers
-- Is written in English, professional but friendly tone
+- Is written in ${langName}, professional but friendly tone
 
 Return only the brand story text, no titles or extra formatting.
 `)
 
    log('🤖', '生成店铺标语...')
    const tagline = await askAI(`
-Write a short, catchy tagline (max 10 words) for an online store called "${storeName}" that sells: ${products.map(p => p.title).join(', ')}.
-Return only the tagline, nothing else.
+Write a short, catchy tagline (max 10 words) for an online store called "${storeName}" that sells: ${products.map((p) => p.title).join(', ')}.
+Write in ${langName}. Return only the tagline, nothing else.
 `)
 
    log('🤖', '生成 FAQ...')
@@ -103,7 +108,7 @@ Q: [question]
 A: [answer]
 
 Topics to cover: shipping, returns, payment, product quality, customer support.
-Keep answers concise and helpful. Return only the Q&A pairs.
+Write in ${langName}. Keep answers concise and helpful. Return only the Q&A pairs.
 `)
 
    return {
@@ -114,20 +119,21 @@ Keep answers concise and helpful. Return only the Q&A pairs.
 }
 
 // ===== 生成商品描述 =====
-async function generateProductDescription(productTitle, brandName, price) {
+async function generateProductDescription(productTitle, brandName, price, locale) {
+   const langName = getAiLanguageName(locale.language)
    log('🤖', `生成商品描述：${productTitle}...`)
    const description = await askAI(`
 Write a compelling product description for an e-commerce listing.
 
 Product: ${productTitle}
 Brand: ${brandName}
-Price: $${price}
+Price: ${formatPriceForPrompt(price, locale.currency)}
 
 Write 2-3 sentences that:
 - Highlight key features and benefits
 - Create desire in the buyer
 - Are professional and persuasive
-- Written in English
+- Written in ${langName}
 
 Return only the product description, no titles or extra formatting.
 `)
@@ -154,6 +160,8 @@ async function main() {
    if (!storeItem) throw new Error(`找不到客户ID为 "${clientId}" 的店铺信息`)
 
    const storeName = storeItem.fields['店铺名称'] || clientId
+   const locale = parseLocaleFromFeishuFields(storeItem.fields)
+   log('🌍', `目标语言/地区：${locale.language} · ${locale.region} · ${locale.currency}`)
 
    // 读取商品列表
    const productItems = await getRecords(token, PRODUCTS_TABLE_ID)
@@ -171,7 +179,7 @@ async function main() {
 
    // 第一步：生成店铺文案
    console.log('\n📝 生成店铺文案...')
-   const storeContent = await generateStoreContent(storeName, products)
+   const storeContent = await generateStoreContent(storeName, products, locale)
 
    // 回写店铺文案到飞书
    await updateRecord(token, STORE_TABLE_ID, storeItem.record_id, {
@@ -191,7 +199,8 @@ async function main() {
       const description = await generateProductDescription(
          product.title,
          product.brand,
-         product.price
+         product.price,
+         locale
       )
       await updateRecord(token, PRODUCTS_TABLE_ID, product.recordId, {
          '商品描述': description,

@@ -7,7 +7,41 @@ const ARK_API_KEY = process.env.ARK_API_KEY || 'YOUR_ARK_API_KEY'
 const ARK_MODEL = 'ep-20260520160054-cvn7v'
 const ARK_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
 
+const FEISHU_APP_ID = process.env.FEISHU_APP_ID || 'YOUR_FEISHU_APP_ID'
+const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET || 'YOUR_FEISHU_APP_SECRET'
+const FEISHU_APP_TOKEN = process.env.FEISHU_APP_TOKEN || 'YOUR_FEISHU_APP_TOKEN'
+const STORE_TABLE_ID = 'tblAn8PI1eoduVkn'
+const { parseLocaleFromFeishuFields, getAiLanguageName } = require('./locale')
+
 function log(emoji, msg) { console.log(`${emoji}  ${msg}`) }
+
+async function getFeishuToken() {
+   const res = await fetch(
+      'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',
+      {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ app_id: FEISHU_APP_ID, app_secret: FEISHU_APP_SECRET }),
+      }
+   )
+   const data = await res.json()
+   return data.tenant_access_token
+}
+
+async function getStoreFromFeishu(clientId) {
+   const token = await getFeishuToken()
+   const res = await fetch(
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${FEISHU_APP_TOKEN}/tables/${STORE_TABLE_ID}/records`,
+      { headers: { Authorization: `Bearer ${token}` } }
+   )
+   const data = await res.json()
+   const storeItem = (data.data?.items || []).find((r) => r.fields['客户ID'] === clientId)
+   if (!storeItem) return { storeName: clientId, locale: parseLocaleFromFeishuFields({}) }
+   return {
+      storeName: storeItem.fields['店铺名称'] || clientId,
+      locale: parseLocaleFromFeishuFields(storeItem.fields),
+   }
+}
 
 // ===== AI 调用 =====
 async function askAI(prompt) {
@@ -38,9 +72,10 @@ function generateSlug(title) {
 }
 
 // ===== 生成博客文章 =====
-async function generateBlogPost(storeName, products, existingSlugs) {
+async function generateBlogPost(storeName, products, existingSlugs, locale) {
    const productList = products.map(p => p.title).join(', ')
    const randomProduct = products[Math.floor(Math.random() * products.length)]
+   const langName = getAiLanguageName(locale.language)
 
    log('🤖', `生成博客文章，主题：${randomProduct?.title || storeName}...`)
 
@@ -49,6 +84,7 @@ async function generateBlogPost(storeName, products, existingSlugs) {
 You are an expert SEO content writer for e-commerce websites.
 
 Store: ${storeName}
+Target market: ${locale.region}
 Products: ${productList}
 Focus product: ${randomProduct?.title || productList}
 
@@ -67,7 +103,7 @@ Requirements:
 - Content should be informative, engaging, and SEO-optimized
 - Include H2 subheadings in the content
 - Content should naturally mention the products
-- Write in English
+- Write in ${langName}
 - Return ONLY valid JSON, no extra text
 `)
 
@@ -128,6 +164,9 @@ async function main() {
    const prisma = new PrismaClient()
 
    try {
+      const { storeName, locale } = await getStoreFromFeishu(clientId)
+      log('🌍', `博客语言/地区：${locale.language} · ${locale.region}`)
+
       // 读取现有文章避免重复
       const existingBlogs = await prisma.blog.findMany({ select: { slug: true } })
       const existingSlugs = new Set(existingBlogs.map(b => b.slug))
@@ -156,8 +195,7 @@ async function main() {
       })
 
       // 生成博客文章
-      const storeName = clientId
-      const blogPost = await generateBlogPost(storeName, products, existingSlugs)
+      const blogPost = await generateBlogPost(storeName, products, existingSlugs, locale)
 
       // 写入数据库
       await prisma.blog.create({
