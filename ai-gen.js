@@ -3,13 +3,13 @@
 // 运行方法：node ai-gen.js 客户ID
 // 例如：node ai-gen.js client001
 
-const ARK_API_KEY = process.env.ARK_API_KEY || 'ark-3c2e7343-f8ef-46f5-b008-3aa589270656-78fb9'
-const ARK_MODEL = 'ep-20260520160054-cvn7v'
+const ARK_API_KEY = process.env.ARK_API_KEY || 'YOUR_ARK_API_KEY'
+const ARK_MODEL = process.env.ARK_MODEL || 'ep-20260520160054-cvn7v'
 const ARK_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
 
-const FEISHU_APP_ID = 'cli_aaaa4e460f781bc3'
-const FEISHU_APP_SECRET = 'jQHMKcQLlr4h0pbHDYQi7EIjFIohtsbl'
-const FEISHU_APP_TOKEN = 'Txeab1NDVaBiNssZ9mIc2fwmngo'
+const FEISHU_APP_ID = process.env.FEISHU_APP_ID || 'YOUR_FEISHU_APP_ID'
+const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET || 'YOUR_FEISHU_APP_SECRET'
+const FEISHU_APP_TOKEN = process.env.FEISHU_APP_TOKEN || 'YOUR_FEISHU_APP_TOKEN'
 const STORE_TABLE_ID = 'tblAn8PI1eoduVkn'
 const PRODUCTS_TABLE_ID = 'tbldKPEdxtADz4v9'
 

@@ -3,7 +3,7 @@
 // 运行方法：node ai-blog.js 客户ID 数据库连接字符串
 // 例如：node ai-blog.js client001 "postgresql://..."
 
-const ARK_API_KEY = process.env.ARK_API_KEY || 'ark-3c2e7343-f8ef-46f5-b008-3aa589270656-78fb9'
+const ARK_API_KEY = process.env.ARK_API_KEY || 'YOUR_ARK_API_KEY'
 const ARK_MODEL = 'ep-20260520160054-cvn7v'
 const ARK_API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
 

@@ -5,9 +5,9 @@
 const { PrismaClient } = require('@prisma/client')
 
 // ===== 飞书配置 =====
-const FEISHU_APP_ID = 'cli_aaaa4e460f781bc3'
-const FEISHU_APP_SECRET = 'jQHMKcQLlr4h0pbHDYQi7EIjFIohtsbl'
-const FEISHU_APP_TOKEN = 'Txeab1NDVaBiNssZ9mIc2fwmngo'
+const FEISHU_APP_ID = process.env.FEISHU_APP_ID || 'YOUR_FEISHU_APP_ID'
+const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET || 'YOUR_FEISHU_APP_SECRET'
+const FEISHU_APP_TOKEN = process.env.FEISHU_APP_TOKEN || 'YOUR_FEISHU_APP_TOKEN'
 
 const TABLES = {
    store: 'tblAn8PI1eoduVkn',
